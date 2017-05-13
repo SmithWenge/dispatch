@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<bean id="defaultRealm" class="com.dls.function.support.shiro.LgbManageSystemRealm" />
+
+	<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+		<property name="cacheManager" ref="shiroEhcacheManager" />
+		<property name="realm" ref="defaultRealm"/>
+	</bean>
+
+	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+		<property name="securityManager" ref="securityManager"/>
+		<property name="loginUrl" value="/login/route.action"/>
+		<property name="unauthorizedUrl" value="/http/403.action"/>
+		<property name="filterChainDefinitions">
+			<value>
+				<!-- anon表示地址不需要任何权限即可访问 -->
+				/static/**=anon
+				<!-- 数据库连接监控 -->
+				/druid/**=anon
+				/admin/routeLogin.action=anon
+				/admin/login.action=anon
+				/admin/**=authc
+				/admin/logout.action=logout
+				/login/**=anon
+			</value>
+		</property>
+	</bean>
+
+	<!-- 保证实现了Shiro内部lifecycle函数的bean执行 -->
+	<bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+</beans>

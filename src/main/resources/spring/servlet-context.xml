@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/mvc"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:beans="http://www.springframework.org/schema/beans"
+             xmlns:context="http://www.springframework.org/schema/context"
+             xmlns:tx="http://www.springframework.org/schema/tx"
+             xmlns:mvc="http://www.springframework.org/schema/mvc"
+             xsi:schemaLocation="http://www.springframework.org/schema/mvc
+	http://www.springframework.org/schema/mvc/spring-mvc.xsd
+	http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/context 
+	http://www.springframework.org/schema/context/spring-context.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx-3.0.xsd ">
+
+    <context:property-placeholder ignore-unresolvable="true" location="classpath:db/db.properties"/>
+
+    <beans:bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource">
+        <beans:property name="driverClassName" value="${jdbc.driverClassName}" />
+        <beans:property name="url" value="${jdbc.url}" />
+        <beans:property name="username" value="${jdbc.username}" />
+        <beans:property name="password" value="${jdbc.password}" />
+        <beans:property name="filters" value="${jdbc.filters}" />
+        <beans:property name="initialSize" value="${jdbc.initialSize}" />
+        <beans:property name="maxActive" value="${jdbc.maxActive}" />
+        <beans:property name="maxWait" value="${jdbc.maxWait}" />
+        <beans:property name="timeBetweenEvictionRunsMillis" value="${jdbc.timeBetweenEvictionRunsMillis}" />
+        <beans:property name="minEvictableIdleTimeMillis" value="${jdbc.minEvictableIdleTimeMillis}" />
+        <beans:property name="validationQuery" value="${jdbc.validationQuery}" />
+        <beans:property name="testWhileIdle" value="${jdbc.testWhileIdle}" />
+        <beans:property name="testOnBorrow" value="${jdbc.testOnBorrow}" />
+        <beans:property name="testOnReturn" value="${jdbc.testOnReturn}" />
+        <beans:property name="poolPreparedStatements" value="${jdbc.poolPreparedStatements}" />
+        <beans:property name="maxPoolPreparedStatementPerConnectionSize" value="${jdbc.maxPoolPreparedStatementPerConnectionSize}" />
+    </beans:bean>
+
+    <beans:bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+        <beans:property name="dataSource" ref="dataSource"/>
+    </beans:bean>
+
+    <context:component-scan base-package="com.dls.function" />
+
+	<!-- Enables the Spring MVC @HomeController programming model -->
+	<annotation-driven>
+        <!-- 设置分页功能的参数解析器 -->
+        <argument-resolvers>
+            <beans:bean id="sortResolver" class="org.springframework.data.web.SortHandlerMethodArgumentResolver" />
+            <beans:bean id="pageableResolver" class="org.springframework.data.web.PageableHandlerMethodArgumentResolver" >
+                <beans:constructor-arg ref="sortResolver" />
+            </beans:bean>
+        </argument-resolvers>
+        <!-- 将StringHttpMessageConverter的默认编码设为UTF-8 -->
+        <message-converters register-defaults="true">
+            <beans:bean class="org.springframework.http.converter.StringHttpMessageConverter">
+                <beans:constructor-arg value="UTF-8" />
+            </beans:bean>
+        </message-converters>
+    </annotation-driven>
+
+    <beans:bean class="org.springframework.data.web.config.SpringDataWebConfiguration" />
+    <!-- <beans:bean class="org.springframework.data.web.config.HateoasAwareSpringDataWebConfiguration" /> -->
+
+    <resources location="/static/" mapping="/static/**"/>
+
+    <beans:bean id="exceptionResolver" class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+        <beans:property name="exceptionMappings">
+            <beans:props>
+                <beans:prop key="com.team.group.join.exception.ViewNotFoundException">error/404</beans:prop>
+                <beans:prop key="java.lang.Exception">error/error</beans:prop>
+                <beans:prop key="java.lang.RuntimeException">error/error</beans:prop>
+            </beans:props>
+        </beans:property>
+        <beans:property name="statusCodes">
+            <beans:props>
+                <beans:prop key="error/404">404</beans:prop>
+                <beans:prop key="error/error">500</beans:prop>
+            </beans:props>
+        </beans:property>
+        <!-- 设置日志输出级别,不定义则默认不输出警告等错误日志信息 -->
+        <beans:property name="warnLogCategory" value="WARN" />
+        <!-- 默认错误页面,当找不到上面mappings中指定的异常对应视图时,使用本默认配置 -->
+        <beans:property name="defaultErrorView" value="errors/error" />
+        <!-- 默认HTTP状态码 -->
+        <beans:property name="defaultStatusCode" value="500" />
+    </beans:bean>
+
+	<!-- Resolves views selected for rendering by @Controllers to .jsp resources in the /WEB-INF/views directory -->
+	<beans:bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<beans:property name="prefix" value="/WEB-INF/views/" />
+		<beans:property name="suffix" value=".jsp" />
+	</beans:bean>
+	<!-- 配置扫描注解的base package -->
+    <tx:annotation-driven />
+
+    <!-- 避免IE执行AJAX时,返回JSON出现下载文件 -->
+    <beans:bean id="mappingJacksonHttpMessageConverter"
+                class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+        <beans:property name="supportedMediaTypes">
+            <beans:list>
+                <beans:value>application/json;charset=UTF-8</beans:value>
+            </beans:list>
+        </beans:property>
+    </beans:bean>
+
+    <!-- 启动Spring MVC 的注解功能,完成请求和注解POJO的映射 -->
+    <beans:bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter">
+        <beans:property name="messageConverters">
+            <beans:list>
+                <beans:ref bean="mappingJacksonHttpMessageConverter" />  <!-- json转换器 -->
+            </beans:list>
+        </beans:property>
+        <beans:property name="customArgumentResolvers">
+            <beans:list>
+                <beans:bean class="org.springframework.data.web.PageableHandlerMethodArgumentResolver" />
+            </beans:list>
+        </beans:property>
+    </beans:bean>
+
+    <!-- File upload -->
+    <beans:bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <beans:property name="maxUploadSize" value="104857600" />
+        <beans:property name="maxInMemorySize" value="40960" />
+    </beans:bean>
+
+
+    <!-- init transaction -->
+    <beans:bean id="transactionManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <beans:property name="dataSource" ref="dataSource" />
+    </beans:bean>
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <beans:bean class="com.dls.arc.web.tag.DictionaryTag" init-method="init" lazy-init="false">
+        <beans:property name="manager" ref="defaultDictionaryManager" />
+    </beans:bean>
+
+    <beans:bean id="captchaProducer" class="com.google.code.kaptcha.impl.DefaultKaptcha">
+        <beans:property name="config">
+            <beans:bean class="com.google.code.kaptcha.util.Config">
+                <beans:constructor-arg type="java.util.Properties">
+                    <beans:props>
+                        <beans:prop key="kaptcha.image.width">150</beans:prop>
+                        <beans:prop key="kaptcha.image.height">45</beans:prop>
+                        <beans:prop key="kaptcha.textproducer.char.string">abcdefgrstuvw0123456789hijklmnopqxyz</beans:prop>
+                        <beans:prop key="kaptcha.textproducer.char.length">4</beans:prop>
+                        <beans:prop key="kaptcha.session.key">KAPTCHA_SESSION_KEY</beans:prop>
+                    </beans:props>
+                </beans:constructor-arg>
+            </beans:bean>
+        </beans:property>
+    </beans:bean>
+
+    <!-- Shiro缓存 -->
+    <beans:bean id="shiroEhcacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+        <!--classpath是缓存属性的配置文件  -->
+        <beans:property name="cacheManagerConfigFile" value="classpath:shiro/shiro-ehcache.xml"/>
+    </beans:bean>
+</beans:beans>
